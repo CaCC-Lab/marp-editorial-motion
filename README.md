@@ -8,9 +8,9 @@ Markdown を書くだけで、ブラウザでなめらかにフェードイン�
 ![Motion](https://img.shields.io/badge/motion-GSAP-88CE02.svg)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-A02C2C.svg)
 
-![3 ページを 1 枚ずつめくるプレビュー（表紙 → メッセージ → 本文）](examples/preview.gif)
+![表紙 → メッセージ → 本文を 1 枚ずつ送り、各スライドで要素が順にフェードインするプレビュー](examples/preview.gif)
 
-<sub>3 ページを 1 枚ずつめくった様子（表紙 / メッセージ / 本文）。ブラウザで開く HTML では、これに加えて各要素が順にフェードインします。PDF は静的に書き出し——原稿は共通。</sub>
+<sub>表紙 → メッセージ → 本文を 1 枚ずつ送り、各スライドで**要素が順にフェードイン**します（ブラウザで開いた HTML の実際の動き）。PDF は静的に書き出し——原稿は共通。</sub>
 
 - 🎨 **エディトリアルな見た目** — 紙 / 墨 / 藍 / 朱、明朝の見出し、ヘアライン罫、モノスペースのページ番号、整った表組み、付録レイアウト
 - 🎬 **モーション標準装備** — ビルド後の HTML に GSAP の entrance アニメを注入（PDF は静的のまま）
@@ -129,20 +129,18 @@ theme.css ─┘                                          │
 
 ## プレビューの再生成
 
-`examples/preview.gif` は、ビルドした PDF の各ページを静止画にして、**`slideleft`（ページめくり）で 3 ページをつないで**作っています（ブラウザも不要・`pdftoppm` ＋ `ffmpeg` だけ）：
+`examples/preview.gif` は、**ポーズした GSAP タイムラインを progress 0→1 で送りながら 1 コマずつ撮影**し（実時間録画ではないので決定論的）、3 ページ（`"1,2,3"`）を順に送って作っています。要素ごとのフェードインがそのまま記録されます：
 
 ```bash
+npm i -D playwright            # 初回のみ
 node build.mjs examples/slides.md
-TMP=$(mktemp -d); pdftoppm -r 110 -png examples/slides.pdf "$TMP/s"
-ffmpeg -y -loop 1 -t 1.3 -i "$TMP/s-1.png" -loop 1 -t 1.3 -i "$TMP/s-2.png" -loop 1 -t 1.7 -i "$TMP/s-3.png" \
-  -filter_complex "[0:v]scale=960:-1,setsar=1,fps=25[v0];[1:v]scale=960:-1,setsar=1,fps=25[v1];[2:v]scale=960:-1,setsar=1,fps=25[v2];\
-[v0][v1]xfade=transition=slideleft:duration=0.55:offset=0.95[a];[a][v2]xfade=transition=slideleft:duration=0.55:offset=1.85[v]" \
-  -map "[v]" -pix_fmt yuv420p "$TMP/flip.mp4"
-ffmpeg -y -i "$TMP/flip.mp4" -vf palettegen=stats_mode=diff "$TMP/pal.png"
-ffmpeg -y -i "$TMP/flip.mp4" -i "$TMP/pal.png" -lavfi paletteuse=dither=bayer:bayer_scale=3 examples/preview.gif
+node scripts/capture_preview.js examples/slides.html /tmp/frames "1,2,3" 20 8
+ffmpeg -y -framerate 25 -i /tmp/frames/f_%03d.png \
+  -vf "scale=960:-1:flags=lanczos,palettegen=stats_mode=diff" /tmp/pal.png
+ffmpeg -y -framerate 25 -i /tmp/frames/f_%03d.png -i /tmp/pal.png \
+  -lavfi "scale=960:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" \
+  examples/preview.gif
 ```
-
-> 各スライドの **要素ごとの GSAP フェードイン** を 1 コマずつ撮りたい場合は `scripts/capture_preview.js`（Playwright が必要）を使えます：`node scripts/capture_preview.js examples/slides.html /tmp/frames "1,2,3" 20 8`。
 
 ---
 
