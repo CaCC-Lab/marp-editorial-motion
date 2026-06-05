@@ -3,13 +3,23 @@
 **An editorial-style [Marp](https://marp.app/) theme — with motion.**
 Write Markdown, get calm, print-inspired slides that fade in smoothly in the browser (via GSAP) and export to a clean static PDF. Same source, two outputs.
 
-![Preview of the Editorial Refined Minimalism theme](examples/preview.png)
+[![License: MIT](https://img.shields.io/badge/License-MIT-1B365D.svg)](LICENSE)
+![Marp](https://img.shields.io/badge/Marp-compatible-0288d1.svg?logo=markdown)
+![Motion](https://img.shields.io/badge/motion-GSAP-88CE02.svg)
+![PRs welcome](https://img.shields.io/badge/PRs-welcome-A02C2C.svg)
+
+![Animated preview — each element fades in with a staggered entrance](examples/preview.gif)
+
+<sub>The HTML output fades each element in (above). The PDF export is clean and static — same Markdown source.</sub>
 
 - 🎨 **Editorial look** — paper / ink / indigo / vermilion, serif headings, hairline rules, monospace issue numbers
 - 🎬 **Motion for free** — GSAP entrance animations injected into the HTML after build (PDF stays static)
 - 🧩 **Class system** — `title` and `message` layouts, plus `.hdr` `.ftr` `.lead` `.small` for body slides
 - 🔧 **One-file restyle** — change a few CSS variables in `theme.css` and the whole deck follows
 - 🪶 **Self-contained** — extends Marp's bundled `default` theme (`@import 'default';`); fonts via Google Fonts, GSAP via CDN
+
+![Title, body, and message slide layouts](examples/preview.png)
+<sub>Three of the built-in layouts: title · body (with header/footer) · message.</sub>
 
 ---
 
@@ -107,6 +117,24 @@ theme.css ─┘                                          │
 
 - `theme.css` — the appearance. A Marp custom theme (`/* @theme erm */`) that extends the built-in `default` theme.
 - `inject_gsap.py` — the motion. Adds a `MutationObserver` + GSAP script to the built HTML so each slide's elements fade in on view. Idempotent; PDF is never touched.
+
+---
+
+## Regenerating the preview
+
+The animated `examples/preview.gif` is built deterministically by driving a paused
+GSAP timeline (progress 0→1) and screenshotting each step — no real-time recording:
+
+```bash
+npm i -D playwright            # once
+bash build_slides.sh examples/slides.md
+node scripts/capture_preview.js examples/slides.html /tmp/frames 3
+ffmpeg -y -framerate 25 -i /tmp/frames/f_%03d.png \
+  -vf "scale=960:-1:flags=lanczos,palettegen=stats_mode=diff" /tmp/pal.png
+ffmpeg -y -framerate 25 -i /tmp/frames/f_%03d.png -i /tmp/pal.png \
+  -lavfi "scale=960:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" \
+  examples/preview.gif
+```
 
 ---
 
