@@ -1,25 +1,32 @@
-// Deterministic capture of the entrance animation into a frame sequence.
-// Drives a *paused* GSAP timeline (progress 0→1) and screenshots each step,
-// so the result is smooth and reproducible (no real-time polling).
+// Deterministic capture of the entrance animation across several slides into a
+// frame sequence: each target slide plays its entrance (paused GSAP timeline
+// progress 0→1), holds, then advances to the next — "flipping" one page at a
+// time. Smooth and reproducible (no real-time polling).
 //
-// Usage: node scripts/capture_preview.js <slides.html> <outDir> [slideIndex]
+// Usage: node scripts/capture_preview.js <slides.html> <outDir> [slides] [entrance] [hold]
+//   slides   comma list of 1-based slide indices to flip through (default "1,2,3")
+//   entrance frames for each fade-in (default 20)
+//   hold     frames held on the full slide before turning (default 8)
 // Requires: `npm i -D playwright` and a Chrome/Chromium.
-//   - by default uses Playwright's `chrome` channel
-//   - or set CHROME_PATH=/path/to/chrome to use a system binary
-// Then turn the frames into a GIF, e.g. with ffmpeg (see README).
+//   default uses Playwright's `chrome` channel, or set CHROME_PATH=/path/to/chrome.
 
-const { chromium } = require('playwright');
-const path = require('path');
-const fs = require('fs');
+import { chromium } from 'playwright';
+import path from 'node:path';
+import fs from 'node:fs';
 
 const CHROME_PATH = process.env.CHROME_PATH || '';
-
 const htmlPath = path.resolve(process.argv[2]);
 const outDir = path.resolve(process.argv[3] || '/tmp/giframes');
-const slideIndex = parseInt(process.argv[4] || '3', 10); // 1-based; 3 = "What you get"
+const SLIDES = (process.argv[4] || '1,2,3').split(',').map(s => parseInt(s, 10));
+const ENTRANCE = parseInt(process.argv[5] || '20', 10);
+const HOLD = parseInt(process.argv[6] || '8', 10);
 
-const MOTION_FRAMES = 30;
-const HOLD_FRAMES = 14;
+const TARGETS_SELECTOR =
+  'h1, h2, h3, blockquote, .lead, .credo, .kicker, .meta, .tail, ' +
+  '.hdr, .ftr, ul > li, ol > li, table, thead th, tbody tr, pre';
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const pad = (n) => String(n).padStart(3, '0');
 
 (async () => {
   fs.mkdirSync(outDir, { recursive: true });
@@ -30,52 +37,46 @@ const HOLD_FRAMES = 14;
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1.5 });
   await page.goto('file://' + htmlPath);
 
-  // hide Bespoke on-screen controls / progress so they never appear in frames
+  // hide Bespoke on-screen controls so they never appear in frames
   await page.addStyleTag({ content: `
     .bespoke-marp-osc, [class*="bespoke-marp-osc"],
     .bespoke-marp-osd, .bespoke-progress-parent { display: none !important; opacity: 0 !important; }
   `});
 
-  // wait for bespoke + gsap
   await page.waitForSelector('.bespoke-marp-slide.bespoke-marp-active section');
   await page.waitForFunction(() => typeof window.gsap !== 'undefined');
-  await page.waitForTimeout(500); // let Bespoke apply its fit transform
+  await page.waitForTimeout(500);
 
-  // navigate to the target slide (press ArrowRight slideIndex-1 times)
-  for (let i = 1; i < slideIndex; i++) {
-    await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(200);
-  }
-  await page.waitForTimeout(700); // let the auto entrance + scaling settle
-
-  // build a PAUSED timeline that replays the entrance on the active section
-  await page.evaluate(() => {
-    const section = document.querySelector('.bespoke-marp-slide.bespoke-marp-active section');
-    const targets = section.querySelectorAll(
-      'h1, h2, h3, blockquote, .lead, .credo, .kicker, .meta, .tail, .hdr, .ftr, ul > li, ol > li, table, pre'
-    );
-    window.gsap.killTweensOf(targets);
-    const tl = window.gsap.timeline({ paused: true });
-    tl.from(targets, { opacity: 0, y: 28, duration: 0.7, stagger: 0.09, ease: 'power3.out' });
-    window.__tl = tl;
-    window.__seek = (p) => { tl.progress(p); };
-    window.__seek(0);
-  });
-
-  await page.waitForTimeout(300); // settle at progress 0 before first frame
-
+  let current = 1;     // Bespoke starts on slide 1
   let frame = 0;
-  const pad = (n) => String(n).padStart(3, '0');
 
-  for (let i = 0; i < MOTION_FRAMES; i++) {
-    const p = i / (MOTION_FRAMES - 1);
-    await page.evaluate((p) => window.__seek(p), p);
-    await page.screenshot({ path: path.join(outDir, `f_${pad(frame++)}.png`), clip: { x: 0, y: 0, width: 1280, height: 720 } });
-  }
-  for (let i = 0; i < HOLD_FRAMES; i++) {
-    await page.screenshot({ path: path.join(outDir, `f_${pad(frame++)}.png`), clip: { x: 0, y: 0, width: 1280, height: 720 } });
+  for (const target of SLIDES) {
+    while (current < target) { await page.keyboard.press('ArrowRight'); current++; await page.waitForTimeout(220); }
+    while (current > target) { await page.keyboard.press('ArrowLeft'); current--; await page.waitForTimeout(220); }
+    await page.waitForTimeout(650); // settle + let the auto entrance pass
+
+    // build a PAUSED timeline that replays the entrance on the active section
+    await page.evaluate((sel) => {
+      const section = document.querySelector('.bespoke-marp-slide.bespoke-marp-active section');
+      const t = section.querySelectorAll(sel);
+      window.gsap.killTweensOf(t);
+      const tl = window.gsap.timeline({ paused: true });
+      tl.from(t, { opacity: 0, y: 28, duration: 0.7, stagger: 0.09, ease: 'power3.out' });
+      window.__seek = (p) => tl.progress(p);
+      window.__seek(0);
+    }, TARGETS_SELECTOR);
+    await page.waitForTimeout(150);
+
+    for (let i = 0; i < ENTRANCE; i++) {
+      const p = ENTRANCE === 1 ? 1 : i / (ENTRANCE - 1);
+      await page.evaluate((p) => window.__seek(p), p);
+      await page.screenshot({ path: path.join(outDir, `f_${pad(frame++)}.png`), clip: { x: 0, y: 0, width: 1280, height: 720 } });
+    }
+    for (let i = 0; i < HOLD; i++) {
+      await page.screenshot({ path: path.join(outDir, `f_${pad(frame++)}.png`), clip: { x: 0, y: 0, width: 1280, height: 720 } });
+    }
   }
 
   await browser.close();
-  console.log(`captured ${frame} frames into ${outDir}`);
+  console.log(`captured ${frame} frames (slides ${SLIDES.join(',')}) into ${outDir}`);
 })().catch((e) => { console.error(e); process.exit(1); });

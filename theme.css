@@ -1,24 +1,25 @@
 /* @theme erm */
 /*
  * Editorial Refined Minimalism — an editorial-style Marp theme.
- * A calm, print-inspired look: paper / ink / indigo / vermilion, serif headings,
- * hairline rules, monospace issue numbers. Pairs with inject_gsap.py for motion.
+ * Print-inspired: paper / ink / indigo / vermilion, serif headings, hairline
+ * rules, monospace issue numbers, styled tables, and an appendix layout.
+ * Pairs with build.mjs (GSAP motion).
  *
- * Usage:
- *   - put `theme: erm` in your slides.md front-matter, OR
- *   - build with `marp --theme ./theme.css ...` (build_slides.sh does the latter).
- *
- * Customize (start here):
- *   - Colors      → :root  --ink / --paper / --accent / --strike
- *   - Font sizes  → :root  --fs-*   (nudge a few pt if text clips)
- *   - Fonts       → the @import below and font-family on section / h1, h2
- *
- * Built by extending Marp's bundled `default` theme via `@import 'default';`,
- * then overriding. Repo: github.com/CaCC-Lab/marp-editorial-motion  (MIT)
+ * Usage: put `theme: erm` in front-matter, or build with `marp --theme ./theme.css`.
+ * Customize: :root tokens — colors (--ink/--paper/--accent/--strike) and
+ * sizes (--fs-*). Fonts: the @import below + font-family on section / h1, h2.
+ * Extends Marp's bundled `default` theme via `@import 'default';`.
+ * Repo: github.com/CaCC-Lab/marp-editorial-motion  (MIT)
  */
-
 @import 'default';
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+html, body {
+  overflow: hidden !important;
+}
+.bespoke-marp-parent {
+  overflow: hidden !important;
+}
 
 :root {
   --ink: #0e0e10;
@@ -37,25 +38,54 @@
   --fs-h3: 22pt;
   --fs-code: 21pt;
   --fs-pre: 19pt;
+  --fs-table: 17pt;
+  --fs-table-th: 12pt;
   --fs-hdr: 11pt;
   --fs-ftr: 10pt;
+  --fs-pin: 13pt;
   --fs-credo: 56pt;
   --fs-credo-tail: 18pt;
   --fs-title-h1: 42pt;
   --fs-title-meta: 17pt;
   --fs-title-kicker: 13pt;
   --fs-credo-kicker: 12pt;
+  --fs-divider-h2: 44pt;
+  --fs-divider-kicker: 13pt;
+  --fs-flow-time: 14pt;
+  --fs-flow-seg: 15pt;
 }
 
 section {
   font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
   font-weight: 400;
   font-size: var(--fs-body);
-  line-height: 1.55;
-  padding: 64px 88px 80px;
+  line-height: 1.45;
+  padding: 48px 88px 60px;
   color: var(--ink);
   background: var(--paper);
   letter-spacing: 0.01em;
+  overflow: hidden;
+}
+
+section video {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+}
+
+section img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+}
+
+section .video-frame {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 8px 0 0;
 }
 
 section::before {
@@ -117,16 +147,22 @@ h1, h2 {
   line-height: 1.3;
   text-wrap: balance;
   line-break: strict;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
-h1 { font-size: var(--fs-h1); margin: 0 0 8px; }
+h1 {
+  font-size: var(--fs-h1);
+  margin: 0 0 8px;
+}
 
-h2 {
+section h2 {
   font-size: var(--fs-h2);
-  margin: 0 0 32px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid var(--ink);
-  display: inline-block;
+  margin: 0 0 22px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 2px solid var(--ink) !important;
+  display: block !important;
+  width: 100% !important;
 }
 
 h3 {
@@ -136,21 +172,27 @@ h3 {
   margin: 24px 0 12px;
 }
 
-strong { color: var(--strike); font-weight: 700; }
+strong {
+  color: var(--strike);
+  font-weight: 700;
+}
 
 blockquote {
   border-left: 3px solid var(--accent);
   padding: 8px 0 8px 28px;
   margin: 28px 0;
   font-family: 'Noto Serif JP', serif;
+  font-style: normal;
   font-size: var(--fs-lead);
   color: var(--ink);
   line-height: 1.5;
   background: transparent;
+  line-break: strict;
+  text-wrap: pretty;
 }
 
 ul, ol { padding-left: 24px; }
-ul li, ol li { margin: 10px 0; }
+ul li, ol li { margin: 6px 0; }
 ul li::marker { color: var(--accent); }
 ol li::marker {
   color: var(--accent);
@@ -189,14 +231,48 @@ pre {
   color: #f2efe7;
   border-radius: 0;
   border-left: 4px solid var(--accent);
-  padding: 22px 28px;
-  margin: 24px 0;
-  line-height: 1.45;
+  padding: 16px 24px;
+  margin: 14px 0;
+  line-height: 1.4;
 }
 pre code {
   background: transparent;
   color: inherit;
   padding: 0;
+}
+
+table {
+  width: 100%;
+  margin: 20px 0;
+  border-collapse: collapse;
+  font-size: var(--fs-table);
+}
+thead th {
+  text-align: left;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: var(--fs-table-th);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mute);
+  padding: 8px 14px;
+  background: transparent;
+  border-bottom: 2px solid var(--ink);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+tbody td {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--rule);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  vertical-align: top;
+  line-height: 1.4;
+}
+tbody tr:last-child td {
+  border-bottom: 1px solid var(--ink);
 }
 
 section.title {
@@ -227,8 +303,26 @@ section.title .meta {
   margin-top: 40px;
   line-height: 1.7;
 }
+section.title .meta strong {
+  color: var(--ink);
+  font-weight: 500;
+}
 section.title::before,
 section.title::after { display: none; }
+
+section.appendix pre {
+  font-size: 13pt;
+  padding: 12px 18px;
+  margin: 8px 0;
+  line-height: 1.35;
+}
+section.appendix .lead {
+  margin: 0 0 10px;
+}
+section.appendix .lead.small {
+  margin-top: 8px;
+  font-size: 14pt;
+}
 
 section.message {
   display: flex;
@@ -268,13 +362,27 @@ section.message .tail {
 
 .lead {
   font-size: var(--fs-lead);
-  line-height: 1.7;
+  line-height: 1.55;
   color: var(--ink);
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   max-width: 880px;
+  line-break: strict;
+  text-wrap: pretty;
 }
 
 .small {
   font-size: var(--fs-small);
   color: var(--mute);
+}
+
+section.flow-slide table tbody td:first-child {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--fs-flow-time);
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--accent);
+  width: 20%;
+}
+section.flow-slide table tbody td:last-child {
+  font-size: var(--fs-flow-seg);
 }
