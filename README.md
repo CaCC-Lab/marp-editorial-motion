@@ -25,24 +25,24 @@ Write Markdown, get calm, print-inspired slides that fade in smoothly in the bro
 
 ## Quick start
 
-Requirements: **Node.js** (for `npx marp`) and **Python 3** (for `inject_gsap.py`).
+Requirements: **Node.js only**. No `bash`, no `python` — the build is one Node script that runs the same on **Windows (PowerShell), macOS, Linux, and WSL**.
 
 ```bash
 git clone https://github.com/CaCC-Lab/marp-editorial-motion.git
 cd marp-editorial-motion
 
-# Build the example (PDF + animated HTML)
-bash build_slides.sh examples/slides.md
-
-# Open the animated version
-open examples/slides.html      # macOS  (use xdg-open on Linux / start on Windows)
+# Build the example (PDF + animated HTML) — works on every OS
+node build.mjs examples/slides.md
 ```
 
-Or point it at your own file:
+Point it at your own file:
 
 ```bash
-bash build_slides.sh path/to/your-slides.md
+node build.mjs path/to/your-slides.md
 ```
+
+> macOS / Linux / WSL users can also run `bash build_slides.sh <file>` — it just calls `node build.mjs`. On **Windows, use `node build.mjs`** (there is no bash).
+> Then open the generated `*.html` in a browser for the animated version (`*.pdf` is the static export).
 
 Minimal front-matter for your Markdown — **no CSS in the slides**, the theme handles it:
 
@@ -61,9 +61,18 @@ theme: erm
 <div class="meta">date · name</div>
 ```
 
-> Prefer plain Marp? You can also build without the helper script:
-> `npx @marp-team/marp-cli --html --allow-local-files --theme ./theme.css your.md -o your.html`
-> (then run `python3 inject_gsap.py your.html` to add the motion).
+> Prefer plain Marp? `build.mjs` is just two `marp` calls plus a tiny HTML edit (it appends a GSAP `<script>` before `</body>`). You can run `npx @marp-team/marp-cli --theme ./theme.css …` yourself and copy that snippet from `build.mjs` if you want full control.
+
+---
+
+## Build it hands-free (Codex / Claude Code skill)
+
+This repo ships an **Agent Skill** so AI coding agents build for you — just say *"build my slides"*:
+
+- **Codex** reads `.agents/skills/build-slides/SKILL.md`
+- **Claude Code** reads `.claude/skills/build-slides/SKILL.md`
+
+Open the project in either agent and ask it to build, preview, or restyle your deck; the skill tells it to run `node build.mjs` (so it works on Windows too, and won't try the bash script). Both files are the same Agent-Skills format (`name` + `description` front-matter).
 
 ---
 
@@ -109,14 +118,14 @@ you can grow one theme into *your* brand and reuse it — rewrite only the words
 ## How it works
 
 ```
-your.md  ──┐
-           ├─→  marp-cli --theme theme.css  ─→  your.html + your.pdf
+your.md  ──┐        node build.mjs
+           ├─→  marp-cli --theme theme.css  ─→  your.pdf + your.html
 theme.css ─┘                                          │
-                                                      └─→ inject_gsap.py  ─→  animated HTML
+                                          GSAP <script> appended ─→ animated HTML
 ```
 
 - `theme.css` — the appearance. A Marp custom theme (`/* @theme erm */`) that extends the built-in `default` theme.
-- `inject_gsap.py` — the motion. Adds a `MutationObserver` + GSAP script to the built HTML so each slide's elements fade in on view. Idempotent; PDF is never touched.
+- `build.mjs` — the build + the motion. Runs Marp (PDF + HTML), then appends a `MutationObserver` + GSAP `<script>` to the HTML so each slide's elements fade in on view. Idempotent; the PDF is never touched. Pure Node, so it's the same on every OS.
 
 ---
 
@@ -127,7 +136,7 @@ GSAP timeline (progress 0→1) and screenshotting each step — no real-time rec
 
 ```bash
 npm i -D playwright            # once
-bash build_slides.sh examples/slides.md
+node build.mjs examples/slides.md
 node scripts/capture_preview.js examples/slides.html /tmp/frames 3
 ffmpeg -y -framerate 25 -i /tmp/frames/f_%03d.png \
   -vf "scale=960:-1:flags=lanczos,palettegen=stats_mode=diff" /tmp/pal.png

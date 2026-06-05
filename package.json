@@ -1,0 +1,22 @@
+{
+  "name": "marp-editorial-motion",
+  "version": "1.0.0",
+  "description": "An editorial-style Marp theme with GSAP motion. Write Markdown, get animated HTML slides + a static PDF.",
+  "type": "module",
+  "bin": {
+    "marp-editorial-motion": "build.mjs"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "build:example": "node build.mjs examples/slides.md"
+  },
+  "keywords": ["marp", "marp-theme", "slides", "presentation", "gsap", "css", "markdown"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CaCC-Lab/marp-editorial-motion.git"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
