@@ -55,8 +55,11 @@ ${SENTINEL}
     opts = opts || {};
     if (!opts.force && ANIMATED.has(wrapper)) return;
     ANIMATED.add(wrapper);
-    const section = wrapper.querySelector('section');
-    if (section) animateSection(section);
+    // A slide can hold more than one <section>: marp's full-bleed background
+    // images (![bg ...]) insert a background section *before* the content one.
+    // Animate every section — animateSection() no-ops on those with no targets,
+    // so this keeps entrances working whether or not a slide uses a bg image.
+    wrapper.querySelectorAll('section').forEach(animateSection);
   }
   function init() {
     const slides = document.querySelectorAll('.bespoke-marp-slide');
