@@ -147,8 +147,8 @@ h1, h2 {
   line-height: 1.3;
   text-wrap: balance;
   line-break: strict;
-  word-break: normal;
-  overflow-wrap: anywhere;
+  word-break: auto-phrase;
+  overflow-wrap: break-word;
 }
 
 h1 {
@@ -386,3 +386,7 @@ section.flow-slide table tbody td:first-child {
 section.flow-slide table tbody td:last-child {
   font-size: var(--fs-flow-seg);
 }
+
+/* === 日本語の改行を文節境界へ寄せる（Chromium 119+。未対応ブラウザは通常折返しにフォールバック） === */
+section { word-break: auto-phrase; overflow-wrap: break-word; }
+section :where(code, pre, kbd, samp) { word-break: normal; overflow-wrap: normal; }
