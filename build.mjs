@@ -98,14 +98,29 @@ function injectGsap(file) {
   console.log(`  injected GSAP motion into ${html}`);
 }
 
-console.log(`[1/3] ${pdf}  (print / share)`);
-marp(`--pdf  --allow-local-files --theme "${theme}" "${src}" -o "${pdf}"`);
-console.log(`[2/3] ${html}  (browser)`);
+// 1) HTML first. The animated HTML is the star deliverable and needs NO browser,
+//    so it always succeeds — even on locked-down machines where Chrome can't launch.
+console.log(`[1/3] ${html}  (browser, animated)`);
 marp(`--html --allow-local-files --theme "${theme}" "${src}" -o "${html}"`);
-console.log('[3/3] inject GSAP motion');
+console.log('[2/3] inject GSAP motion');
 injectGsap(html);
 
+// 2) PDF last. It needs a headless browser (Chrome/Edge/Firefox), which some
+//    OS/security setups block. Isolate it so a PDF failure NEVER costs you the HTML.
+let pdfOk = false;
+console.log(`[3/3] ${pdf}  (print / share — needs a browser)`);
+try {
+  marp(`--pdf --allow-local-files --theme "${theme}" "${src}" -o "${pdf}"`);
+  pdfOk = true;
+} catch {
+  console.error('\n⚠ PDF skipped: Marp could not launch a browser to render the PDF.');
+  console.error('  Your animated HTML was still created — that is the main deliverable.');
+  console.error('  To also get the PDF, either:');
+  console.error('   • install Google Chrome / Microsoft Edge (Marp auto-detects them), or');
+  console.error(`   • open ${html} in a browser and use Print → Save as PDF.`);
+}
+
 console.log('\n✓ Done.');
-console.log(`  - ${pdf}   : static PDF`);
-console.log(`  - ${html}  : open in a browser for the animated version`);
+console.log(`  - ${html}  : open in a browser for the animated version (always built)`);
+console.log(pdfOk ? `  - ${pdf}   : static PDF` : `  - ${pdf}   : (skipped — see the note above)`);
 console.log('  - Tweak theme.css (:root) to restyle, then rebuild.');
