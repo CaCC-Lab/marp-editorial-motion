@@ -151,6 +151,15 @@ h1, h2 {
   overflow-wrap: break-word;
 }
 
+/* Phrase-aware Japanese line-breaking for body text too (same intent as the
+   headings): wrap at natural phrase boundaries, not mid-word. `auto-phrase` is
+   native in Chromium; running the build with BudouX installed (`npm i budoux`)
+   extends the same phrase breaks to Firefox/Safari and to the printed PDF. */
+.lead, .credo, blockquote, li, td, p {
+  word-break: auto-phrase;
+  overflow-wrap: break-word;
+}
+
 h1 {
   font-size: var(--fs-h1);
   margin: 0 0 8px;

@@ -11,3 +11,7 @@ examples/*.pdf
 node_modules/
 .DS_Store
 Thumbs.db
+
+# BudouX build-time temp (auto-removed; source .md stays clean)
+*.budoux.md
+package-lock.json

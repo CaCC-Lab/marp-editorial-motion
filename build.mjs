@@ -9,8 +9,8 @@
  */
 
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { dirname, resolve, join } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
+import { dirname, resolve, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -98,10 +98,56 @@ function injectGsap(file) {
   console.log(`  injected GSAP motion into ${html}`);
 }
 
+// --- BudouX: phrase-aware Japanese line-breaking (optional dependency) ------
+// Japanese has no spaces, so long lines either overflow (`word-break: keep-all`)
+// or break mid-word (`overflow-wrap: anywhere`). BudouX inserts zero-width breaks
+// (U+200B) at phrase boundaries, so text wraps at natural chunks. `word-break:
+// auto-phrase` in theme.css does the same, but only in Chromium — BudouX extends
+// it to Firefox/Safari and to the printed PDF. If `budoux` isn't installed, the
+// build proceeds unchanged (so `node build.mjs` still works with zero installs).
+const ZWSP = '​';
+const BX_PROTECT = /(<!--[\s\S]*?-->|<\/?[A-Za-z][^>]*>|`[^`]*`|!?\[[^\]]*\]\([^)]*\))/;
+const BX_PREFIX = /^(\s*(?:[-*+]\s+|#{1,6}\s+|>\s*|\d+\.\s+)?)([\s\S]*)$/;
+const BX_JA = /[぀-ヿ㐀-鿿豈-﫿]/;
+function budouxWrap(md, parse) {
+  const wrapText = t => (BX_JA.test(t) ? parse(t).join(ZWSP) : t);
+  const wrapContent = c => c.split(BX_PROTECT).map((p, i) => (i % 2 ? p : wrapText(p))).join('');
+  const lines = md.split('\n');
+  const out = [];
+  let i = 0;
+  if (lines[0] && lines[0].trim() === '---') {            // front-matter: copy verbatim
+    out.push(lines[0]); i = 1;
+    for (; i < lines.length; i++) { out.push(lines[i]); if (lines[i].trim() === '---') { i++; break; } }
+  }
+  let inFence = false, fence = null, inComment = false;
+  for (; i < lines.length; i++) {
+    const line = lines[i], s = line.replace(/^\s+/, '');
+    if (inComment) { out.push(line); if (line.includes('-->')) inComment = false; }
+    else if (!inFence && (s.startsWith('```') || s.startsWith('~~~'))) { inFence = true; fence = s.slice(0, 3); out.push(line); }
+    else if (inFence) { out.push(line); if (s.startsWith(fence)) { inFence = false; fence = null; } }
+    else if (s.startsWith('<!--') && !line.includes('-->')) { inComment = true; out.push(line); }
+    else { const m = BX_PREFIX.exec(line); out.push(m[1] + wrapContent(m[2])); }
+  }
+  return out.join('\n');
+}
+
+// Build from a temp copy with phrase-boundary ZWSP; keep the source .md untouched.
+let buildSrc = src, budouxTemp = null;
+try {
+  const { loadDefaultJapaneseParser } = await import('budoux');
+  const parser = loadDefaultJapaneseParser();
+  budouxTemp = join(dirname(src), `.${basename(src, '.md')}.budoux.md`);
+  writeFileSync(budouxTemp, budouxWrap(readFileSync(src, 'utf8'), t => parser.parse(t)), 'utf8');
+  buildSrc = budouxTemp;
+  console.log('  BudouX: phrase-aware Japanese line-breaks enabled');
+} catch {
+  console.log('  (tip) run `npm i budoux` for phrase-aware Japanese line-breaks');
+}
+
 // 1) HTML first. The animated HTML is the star deliverable and needs NO browser,
 //    so it always succeeds — even on locked-down machines where Chrome can't launch.
 console.log(`[1/3] ${html}  (browser, animated)`);
-marp(`--html --allow-local-files --theme "${theme}" "${src}" -o "${html}"`);
+marp(`--html --allow-local-files --theme "${theme}" "${buildSrc}" -o "${html}"`);
 console.log('[2/3] inject GSAP motion');
 injectGsap(html);
 
@@ -110,7 +156,7 @@ injectGsap(html);
 let pdfOk = false;
 console.log(`[3/3] ${pdf}  (print / share — needs a browser)`);
 try {
-  marp(`--pdf --allow-local-files --theme "${theme}" "${src}" -o "${pdf}"`);
+  marp(`--pdf --allow-local-files --theme "${theme}" "${buildSrc}" -o "${pdf}"`);
   pdfOk = true;
 } catch {
   console.error('\n⚠ PDF skipped: Marp could not launch a browser to render the PDF.');
@@ -119,6 +165,8 @@ try {
   console.error('   • install Google Chrome / Microsoft Edge (Marp auto-detects them), or');
   console.error(`   • open ${html} in a browser and use Print → Save as PDF.`);
 }
+
+if (budouxTemp) { try { unlinkSync(budouxTemp); } catch { /* already gone */ } }
 
 console.log('\n✓ Done.');
 console.log(`  - ${html}  : open in a browser for the animated version (always built)`);
