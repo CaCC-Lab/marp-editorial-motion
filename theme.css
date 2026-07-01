@@ -184,6 +184,9 @@ h3 {
 strong {
   color: var(--strike);
   font-weight: 700;
+  /* 太字ラベルは文節で割らず1語のまま（auto-phrase/BudouX が中で折るのを防ぐ）。 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 blockquote {
