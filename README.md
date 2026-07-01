@@ -14,6 +14,7 @@ Markdown を書くだけで、ブラウザでなめらかにフェードイン�
 
 - 🎨 **エディトリアルな見た目** — 紙 / 墨 / 藍 / 朱、明朝の見出し、ヘアライン罫、モノスペースのページ番号、整った表組み、付録レイアウト
 - 🎬 **モーション標準装備** — ビルド後の HTML に GSAP の entrance アニメを注入（PDF は静的のまま）
+- 🇯🇵 **日本語は文節で改行** — 見出しも本文も語中で切れず、文節（意味のかたまり）で折り返し。CSS `auto-phrase` ＋ 任意の [BudouX](https://github.com/google/budoux) で全ブラウザ・PDF 対応
 - 🧩 **クラス体系** — `title` / `message` レイアウト、本文用の `.hdr` / `.ftr` / `.lead`、表・`appendix` にも対応
 - 🔧 **1 ファイルで再配色** — `theme.css` の `:root` を数行変えるだけで全スライドが追従
 - 🪶 **自己完結** — Marp 組み込みの `default` テーマを `@import 'default';` で継承。フォントは Google Fonts、GSAP は CDN から
@@ -71,6 +72,22 @@ theme: erm
 
 <div class="meta">日付 · 名前</div>
 ```
+
+---
+
+## 日本語の改行（文節で折る）
+
+日本語はスペースが無いので、放っておくと **語の途中** で改行されがちです。このテーマは、見出しも本文も **文節（意味のかたまり）** で折り返します。
+
+- **既定**（追加インストール不要）：CSS の `word-break: auto-phrase` を使用。**Chromium 系**（Chrome / Edge）で文節折りが効きます。
+- **さらに賢く**：**[BudouX](https://github.com/google/budoux)（任意）** を入れると、ビルド時に文節境界へゼロ幅スペース（U+200B）を挿入し、**Firefox / Safari でも、書き出した PDF でも** 文節で折れます。
+
+```bash
+npm i budoux          # 任意。入れると改行がさらに賢くなる
+node build.mjs examples/slides.md
+```
+
+BudouX は **任意依存（optionalDependencies）** です。**入れなくてもビルドはそのまま通ります**（Chromium で `auto-phrase` が効きます）。原稿（`.md`）は書き換えません——ゼロ幅スペースは **ビルド時の一時ファイルにだけ** 入り、フロントマター・コードブロック・HTML タグ / 属性・リンク・見出しマーカーは保護されます。
 
 ---
 

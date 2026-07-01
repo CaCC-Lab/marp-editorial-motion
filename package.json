@@ -10,7 +10,18 @@
     "build": "node build.mjs",
     "build:example": "node build.mjs examples/slides.md"
   },
-  "keywords": ["marp", "marp-theme", "slides", "presentation", "gsap", "css", "markdown"],
+  "keywords": [
+    "marp",
+    "marp-theme",
+    "slides",
+    "presentation",
+    "gsap",
+    "css",
+    "markdown",
+    "budoux",
+    "japanese",
+    "line-break"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,5 +29,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "optionalDependencies": {
+    "budoux": "^0.8.4"
   }
 }
