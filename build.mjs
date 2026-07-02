@@ -106,7 +106,7 @@ function injectGsap(file) {
 // it to Firefox/Safari and to the printed PDF. If `budoux` isn't installed, the
 // build proceeds unchanged (so `node build.mjs` still works with zero installs).
 const ZWSP = '​';
-const BX_PROTECT = /(<!--[\s\S]*?-->|<strong>[\s\S]*?<\/strong>|<\/?[A-Za-z][^>]*>|`[^`]*`|!?\[[^\]]*\]\([^)]*\))/;
+const BX_PROTECT = /(<!--[\s\S]*?-->|<strong>[\s\S]*?<\/strong>|\*\*[^*\n]+\*\*|&#?[A-Za-z0-9]+;|<\/?[A-Za-z][^>]*>|`[^`]*`|!?\[[^\]]*\]\([^)]*\))/;
 const BX_PREFIX = /^(\s*(?:[-*+]\s+|#{1,6}\s+|>\s*|\d+\.\s+)?)([\s\S]*)$/;
 const BX_JA = /[぀-ヿ㐀-鿿豈-﫿]/;
 function budouxWrap(md, parse) {
