@@ -75,6 +75,29 @@ theme: erm
 
 ---
 
+## 自動プレゼン（ノートを読み上げて、自動で進む・動画にする）
+
+スライドのノート（`<!-- -->` に書いたメモ）を音声で読み上げ、読み終わったら次のスライドへ進みます。そのまま MP4 の動画にも書き出せます。
+
+```bash
+node build.mjs slides.md --narrate   # 読み上げ音声 ＋ 自動で進む HTML
+node build.mjs slides.md --video     # ↑に加えて MP4（GSAP の動きも入る）
+```
+
+- **声**：`TTS_ENGINE` で選びます。`sbv2`（既定）・`voicevox`・`elevenlabs`
+- **Style-Bert-VITS2**（`TTS_ENGINE=sbv2`）：[Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) のサーバー（API）を使います。先にサーバーを起動し、使う声を `SBV2_MODEL` で指定します。
+  - `SBV2_MODEL`（必須）…声の名前（`model_assets` の中のフォルダ名）。名前が違うと、使える声の一覧を表示します
+  - `SBV2_URL`（任意・既定 `http://127.0.0.1:5000`）／`SBV2_STYLE`・`SBV2_STYLE_WEIGHT`・`SBV2_LENGTH`（話す速さ。1 が標準、大きいほどゆっくり）・`SBV2_SDP_RATIO`
+  - 例（PowerShell）：`$env:SBV2_MODEL="myvoice"; node build.mjs slides.md --video`
+  - 例（Mac・Linux）：`SBV2_MODEL=myvoice node build.mjs slides.md --video`
+- **VOICEVOX**（`TTS_ENGINE=voicevox`・無料）：[VOICEVOX](https://voicevox.hiroshiba.jp/) のアプリを起動しておきます。`VOICEVOX_SPEAKER`（声の番号・既定 3）、`VOICEVOX_SPEED`（任意・1 が標準）、`VOICEVOX_URL`（任意・既定 `http://127.0.0.1:50021`）。番号が違うと、使える声の一覧（番号=名前）を表示します。**動画を公開するときは、使った声のクレジット（例「VOICEVOX:ずんだもん」）が必要です**（各キャラクターの利用規約を確認してください）
+- **ElevenLabs**（`TTS_ENGINE=elevenlabs`）：`ELEVENLABS_API_KEY` と `ELEVENLABS_VOICE_ID`（必須）、`ELEVENLABS_MODEL`（任意・既定 `eleven_multilingual_v2`）、`ELEVENLABS_SPEED`（任意）。文字数はプランの月の上限から引かれます（同じ文は保存してあるので 2 回目からは使いません）。API キーはファイルに書かず、環境変数で渡してください
+- **読むところ**：ノートに `━━━ 読む ━━━` の区切りがあれば、その部分だけ。無ければ「」で囲んだ台詞だけ。どちらも無ければノート全体。`［ ］` の中（ト書き）と `**` は読みません
+- **自動で進む HTML**：`slides.html` を開いて右下の「▶ 自動プレゼン」を押すと、いま表示しているスライドから読み上げます。`Esc` か「■ 止める」で止まります
+- **動画**：`npm i puppeteer-core ffmpeg-static` が必要です（Chrome か Edge も。見つからないときは `CHROME_PATH`）。1920×1080・30fps。各スライドの出だしの動き（約 2 秒）を 1 コマずつ撮るので、動きがずれません
+- 出力は `slides.narration/`（スライドごとの音声・タイミング）と `slides.mp4`。音声はキャッシュされ、ノートを直した文だけ作り直します
+- 1 回に読める文字数は Style-Bert-VITS2 の設定で 100 字までなので、文ごとに分けて読ませ、つないでいます（ElevenLabs も同じく文ごと。前後の文を渡して、つながりを自然にしています）
+
 ## 日本語の改行（文節で折る）
 
 日本語はスペースが無いので、放っておくと **語の途中** で改行されがちです。このテーマは、見出しも本文も **文節（意味のかたまり）** で折り返します。
