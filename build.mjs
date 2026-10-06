@@ -5,7 +5,9 @@
  * The only requirement is Node.js (which Marp already needs).
  *
  * Usage:
- *   node build.mjs [path/to/slides.md]   (defaults to ./slides.md)
+ *   node build.mjs [path/to/slides.md]            (defaults to ./slides.md)
+ *   node build.mjs slides.md --narrate            + read the notes aloud & auto-advance (see narrate.mjs)
+ *   node build.mjs slides.md --video              + export an MP4 (implies --narrate)
  */
 
 import { execSync } from 'node:child_process';
@@ -14,7 +16,11 @@ import { dirname, resolve, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const src = resolve(process.argv[2] || join(here, 'slides.md'));
+const argv = process.argv.slice(2);
+const flags = new Set(argv.filter(a => a.startsWith('--')));
+const wantVideo = flags.has('--video');
+const wantNarrate = wantVideo || flags.has('--narrate');
+const src = resolve(argv.find(a => !a.startsWith('--')) || join(here, 'slides.md'));
 const theme = join(here, 'theme.css');
 
 if (!existsSync(src)) {
@@ -87,7 +93,8 @@ ${SENTINEL}
 
 function marp(args) {
   // shell:true so `npx` resolves on Windows (npx.cmd) as well as Unix.
-  execSync(`npx --yes @marp-team/marp-cli ${args}`, { stdio: 'inherit', shell: true });
+  // --no-stdin: otherwise marp waits for stdin when it is an open pipe (AI agents, CI) and hangs.
+  execSync(`npx --yes @marp-team/marp-cli --no-stdin ${args}`, { stdio: 'inherit', shell: true });
 }
 
 function injectGsap(file) {
@@ -167,6 +174,18 @@ try {
 }
 
 if (budouxTemp) { try { unlinkSync(budouxTemp); } catch { /* already gone */ } }
+
+// 3) Optional: narration (TTS of the speaker notes) + auto-advance, and an MP4.
+if (wantNarrate) {
+  console.log(`[+] narration${wantVideo ? ' + video' : ''}`);
+  try {
+    const { narrate } = await import('./narrate.mjs');
+    await narrate({ src, html, video: wantVideo });
+  } catch (e) {
+    console.error(`\n⚠ narration skipped: ${e.message}`);
+    process.exitCode = 1;
+  }
+}
 
 console.log('\n✓ Done.');
 console.log(`  - ${html}  : open in a browser for the animated version (always built)`);
